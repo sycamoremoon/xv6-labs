@@ -56,7 +56,7 @@ ls(char *path)
     strcpy(buf, path);
     p = buf+strlen(buf);
     *p++ = '/';
-    while(read(fd, &de, sizeof(de)) == sizeof(de)){
+    while(read(fd, &de, sizeof(de)) == sizeof(de)){			//using while here seems in order to use continue correctly.becasuse this while sentence will be execute only once
       if(de.inum == 0)
         continue;
       memmove(p, de.name, DIRSIZ);

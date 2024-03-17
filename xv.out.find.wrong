@@ -1,0 +1,34 @@
+
+xv6 kernel is booting
+
+hart 2 starting
+hart 1 starting
+init: starting sh
+$ mkdir HS3kEbgt
+$ echo > HS3kEbgt/MdRvUngn
+$ mkdir HS3kEbgt/517Pa0XV
+$ echo > HS3kEbgt/517Pa0XV/MdRvUngn
+$ mkdir zalvpcWW
+$ echo > zalvpcWW/MdRvUngn
+$ find . MdRvUngn
+for the begin the path is .
+the buf is 
+before loop the buf is .
+before recsive the buf is ./HS3kEbgt ,filename is MdRvUngn
+for the begin the path is ./HS3kEbgt
+the buf is 
+before loop the buf is ./HS3kEbgt
+./HS3kEbgt/MdRvUngn
+before recsive the buf is ./HS3kEbgt/517Pa0XV ,filename is MdRvUngn
+for the begin the path is ./HS3kEbgt/517Pa0XV
+the buf is 
+before loop the buf is ./HS3kEbgt/517Pa0XV
+./HS3kEbgt/517Pa0XV/MdRvUngn
+before recsive the buf is ./zalvpcWW ,filename is MdRvUngn
+for the begin the path is ./zalvpcWW
+the buf is ./HS3kEbgt/517Pa0XV
+before loop the buf is ./zalvpcWW/517Pa0XV
+find: cannot stat ./zalvpcWW/517Pa0XV/. 
+find: cannot stat ./zalvpcWW/517Pa0XV/.. 
+find: cannot stat ./zalvpcWW/517Pa0XV/MdRvUngn 
+$ qemu-system-riscv64: terminating on signal 15 from pid 35430 (make)

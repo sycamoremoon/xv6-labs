@@ -57,7 +57,8 @@ kfree(void *pa)
   r = (struct run*)pa;
 
   acquire(&kmem.lock);
-  r->next = kmem.freelist;
+  r->next = kmem.freelist;		//consider that the memory location is not continue
+								//make a one direction list listing all free memory
   kmem.freelist = r;
   release(&kmem.lock);
 }
@@ -80,3 +81,17 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
+
+//Get infomation of the rest free memory(bytes)
+uint64
+kgetrest(void)
+{
+	int block;
+	struct run * r = kmem.freelist;
+	for(block = 0; r != 0 ;block++)
+		r = r->next;
+	return (block*PGSIZE);
+}
+
+

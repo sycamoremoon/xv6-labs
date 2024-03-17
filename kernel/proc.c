@@ -296,6 +296,9 @@ fork(void)
   }
   np->sz = p->sz;
 
+  // copy trace mask from parent to child 
+  np->mask = p->mask;
+
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
 
@@ -685,4 +688,19 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+// Get the processes which state is not UNUSED
+uint8
+procget(void)
+{
+	uint8 i = 0;
+	struct proc * process;
+	for(process=proc;process < &proc[NPROC];process++)
+	{
+		if(process->state != UNUSED)
+			i++;
+	}
+	return i;
 }

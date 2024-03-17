@@ -23,7 +23,7 @@ argfd(int n, int *pfd, struct file **pf)
 {
   int fd;
   struct file *f;
-
+  //n argument indicate that which register where we fetch the fd
   argint(n, &fd);
   if(fd < 0 || fd >= NOFILE || (f=myproc()->ofile[fd]) == 0)
     return -1;
@@ -112,11 +112,11 @@ sys_fstat(void)
 {
   struct file *f;
   uint64 st; // user pointer to struct stat
-
+  //get the struct stat address from register 1
   argaddr(1, &st);
-  if(argfd(0, 0, &f) < 0)
+  if(argfd(0, 0, &f) < 0)		//change where the f point to what fd refers from register 0
     return -1;
-  return filestat(f, st);
+  return filestat(f, st);		//copy struct stat to a certain address (st) from a struct file 
 }
 
 // Create the path new as a link to the same inode as old.

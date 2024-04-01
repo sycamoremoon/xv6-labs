@@ -1,0 +1,2 @@
+some syscall only need to fetch some data from kernel mood can be writen into
+share page appropriately.

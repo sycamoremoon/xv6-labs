@@ -55,10 +55,10 @@ pgaccess_test()
   unsigned int abits;
   printf("pgaccess_test starting\n");
   testname = "pgaccess_test";
-  buf = malloc(32 * PGSIZE);
-  if (pgaccess(buf, 32, &abits) < 0)
+  buf = malloc(32 * PGSIZE);			//allocate pages in userspace, get virtual memory address.
+  if (pgaccess(buf, 32, &abits) < 0)	//syscall of pgaccess
     err("pgaccess failed");
-  buf[PGSIZE * 1] += 1;
+  buf[PGSIZE * 1] += 1;		//Dirty these pages(access to it)
   buf[PGSIZE * 2] += 1;
   buf[PGSIZE * 30] += 1;
   if (pgaccess(buf, 32, &abits) < 0)

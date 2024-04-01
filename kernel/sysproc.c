@@ -75,6 +75,25 @@ int
 sys_pgaccess(void)
 {
   // lab pgtbl: your code here.
+  uint64 vmstart;
+  int numofpg;
+  uint64 vmmask;
+  struct proc * p =myproc();
+  argaddr(0, &vmstart);	//get page's vitual memory start
+  argint(1, &numofpg);	//get num of pages need to look up
+  argaddr(2, &vmmask);	//get the address for store the result
+  uint32 mask =0;
+  numofpg = (numofpg > 32 ? 32 : numofpg);
+  for(int i = 0; i < numofpg; i++)
+  {
+	  pte_t * pte = walk(p->pagetable,vmstart+PGSIZE*i,0);	//walk along with process's pagetable,do not allocate new pagetable.
+	  if(*pte & PTE_A)		//Acess permission
+	  {
+		  mask = mask | (1 << i);
+		  *pte = *pte & ~PTE_A;
+	  }
+  }
+  copyout(p->pagetable, vmmask, (char *)&mask, sizeof(mask));
   return 0;
 }
 #endif

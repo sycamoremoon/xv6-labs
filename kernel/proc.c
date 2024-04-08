@@ -251,6 +251,8 @@ userinit(void)
   // and data into it.
   uvminit(p->pagetable, initcode, sizeof(initcode));
   p->sz = PGSIZE;
+  //mapping user's pagetable to user;s kernel pagetabel 
+  uvmupdate(p->pagetable, p->kernel_pagetable, p->sz);
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
@@ -273,12 +275,19 @@ growproc(int n)
   struct proc *p = myproc();
 
   sz = p->sz;
+
+  //test if user virtual memory is lower than PLIC Limit
+  if(sz + n > PLIC)
+	  panic("growproc");
+
   if(n > 0){
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
     }
+	uvmupdate(p->pagetable,p->kernel_pagetable,sz);
   } else if(n < 0){
-    sz = uvmdealloc(p->pagetable, sz, sz + n);
+    sz = uvmdealloc(p->pagetable, sz, sz + n);// clear pte at uvmunmap.
+	uvmupdate(p->pagetable,p->kernel_pagetable,sz);
   }
   p->sz = sz;
   return 0;
@@ -304,6 +313,9 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+  
+  // Copy user memory from userspace to kernelspace.
+  uvmupdate(p->pagetable, np->kernel_pagetable, p->sz);
   np->sz = p->sz;
 
   np->parent = p;

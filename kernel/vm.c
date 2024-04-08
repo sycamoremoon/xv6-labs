@@ -320,6 +320,29 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   return newsz;
 }
 
+// Update old pagetable to new pagetable 
+// Which share one physical page.
+int
+uvmupdate(pagetable_t old, pagetable_t new, uint64 sz)
+{
+  pte_t *pte, *new_pte;
+  uint64 pa, new_pa, i;
+  uint flags;
+
+  for(i = 0; i < sz; i += PGSIZE){
+  	new_pte = walk(new, i, 1);//find or alloc a pte
+	new_pa = PTE2PA(*new_pte);
+    if((pte = walk(old, i, 0)) == 0)
+      panic("uvmcopy: pte should exist");
+    if((*pte & PTE_V) == 0)
+      panic("uvmcopy: page not present");
+    pa = PTE2PA(*pte);
+	if(new_pa == pa) continue;//this page has already been mapped.
+    flags = PTE_FLAGS(*pte) & ~PTE_U;//kernel pagetable need no PTE_U permission.
+	*new_pte = PA2PTE(pa) | flags;
+  }
+  return 0;
+}
 // Recursively free page-table pages.
 // All leaf mappings must already have been removed.
 void
@@ -371,7 +394,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       panic("uvmcopy: page not present");
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
+    if((mem = kalloc()) == 0)// Which allocate new page to store parent data.
       goto err;
     memmove(mem, (char*)pa, PGSIZE);
     if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
@@ -430,23 +453,24 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
-  uint64 n, va0, pa0;
-
-  while(len > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > len)
-      n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
-
-    len -= n;
-    dst += n;
-    srcva = va0 + PGSIZE;
-  }
-  return 0;
+	return copyin_new(pagetable,dst,srcva,len);
+//  uint64 n, va0, pa0;
+//
+//  while(len > 0){
+//    va0 = PGROUNDDOWN(srcva);
+//    pa0 = walkaddr(pagetable, va0);
+//    if(pa0 == 0)
+//      return -1;
+//    n = PGSIZE - (srcva - va0);
+//    if(n > len)
+//      n = len;
+//    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+//
+//    len -= n;
+//    dst += n;
+//    srcva = va0 + PGSIZE;
+//  }
+//  return 0;
 }
 
 // Copy a null-terminated string from user to kernel.

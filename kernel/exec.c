@@ -68,7 +68,7 @@ exec(char *path, char **argv)
   // Use the second as the user stack.
   sz = PGROUNDUP(sz);
   uint64 sz1;
-  if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)
+  if((sz1 = uvmalloc(pagetable, sz, sz + 2*PGSIZE)) == 0)//uvmalloc return a newsize in virtual address
     goto bad;
   sz = sz1;
   uvmclear(pagetable, sz-2*PGSIZE);
@@ -114,6 +114,9 @@ exec(char *path, char **argv)
   p->sz = sz;
   p->trapframe->epc = elf.entry;  // initial program counter = main
   p->trapframe->sp = sp; // initial stack pointer
+  // Map user process to kernel pagetable. 
+  // Since in exec the kernelpagetable is initally blank.   
+  uvmupdate(p->pagetable, p->kernel_pagetable, 0, p->sz);
   proc_freepagetable(oldpagetable, oldsz);
 
   if(p->pid == 1) vmprint(p->pagetable);

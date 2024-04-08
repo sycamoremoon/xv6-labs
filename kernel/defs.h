@@ -163,6 +163,7 @@ void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);
 void            kvmmap(uint64, uint64, uint64, int);
+pte_t*          walk(pagetable_t,uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
 pagetable_t     uvmcreate(void);
 void            uvminit(pagetable_t, uchar *, uint);
@@ -183,6 +184,7 @@ void            vmprint(pagetable_t);
 void            uvmmap(pagetable_t, uint64, uint64,uint64, int);
 void            kvmswitchsatp(pagetable_t);
 pagetable_t     ukvminit();
+int             uvmupdate(pagetable_t, pagetable_t, uint64, uint64);
 
 // plic.c
 void            plicinit(void);
@@ -207,6 +209,10 @@ void            statsinc(void);
 // sprintf.c
 int             snprintf(char*, int, char*, ...);
 
+// vmcopyin.c
+
+int             copyin_new(pagetable_t, char *, uint64, uint64);
+int             copyinstr_new(pagetable_t, char *, uint64, uint64);
 #ifdef LAB_NET
 // pci.c
 void            pci_init();

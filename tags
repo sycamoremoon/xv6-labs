@@ -3396,6 +3396,7 @@ justone	user/usertests.asm	/^    justone = argv[1];$/;"	d
 kalloc	kernel/kalloc.c	/^kalloc(void)$/;"	f	typeref:typename:void *
 kernel_hartid	kernel/proc.h	/^  \/*  32 *\/ uint64 kernel_hartid; \/\/ saved kernel tp$/;"	m	struct:trapframe	typeref:typename:uint64
 kernel_pagetable	kernel/kernel.asm	/^  kernel_pagetable = (pagetable_t) kalloc();$/;"	d
+kernel_pagetable	kernel/proc.h	/^  pagetable_t kernel_pagetable;\/\/ User kernel pagetbale$/;"	m	struct:proc	typeref:typename:pagetable_t
 kernel_pagetable	kernel/vm.c	/^pagetable_t kernel_pagetable;$/;"	v	typeref:typename:pagetable_t
 kernel_satp	kernel/proc.h	/^  \/*   0 *\/ uint64 kernel_satp;   \/\/ kernel page table$/;"	m	struct:trapframe	typeref:typename:uint64
 kernel_sp	kernel/proc.h	/^  \/*   8 *\/ uint64 kernel_sp;     \/\/ top of process's kernel stack$/;"	m	struct:trapframe	typeref:typename:uint64
@@ -3904,8 +3905,11 @@ procstate	kernel/proc.h	/^enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, 
 proghdr	kernel/elf.h	/^struct proghdr {$/;"	s
 pte	kernel/kernel.asm	/^  pte = walk(kernel_pagetable, va, 0);$/;"	d
 pte	kernel/kernel.asm	/^  pte = walk(pagetable, va, 0);$/;"	d
+pte_low	kernel/kernel.asm	/^						pte_low = low_pagetable[k];$/;"	d
+pte_mid	kernel/kernel.asm	/^				pte_mid = mid_pagetable[j];$/;"	d
 pte_t	kernel/kernel.asm	/^pte_t *$/;"	l
 pte_t	kernel/riscv.h	/^typedef uint64 pte_t;$/;"	t	typeref:typename:uint64
+pte_top	kernel/kernel.asm	/^		pte_top = pagetable[i];$/;"	d
 ptr	user/umalloc.c	/^    union header *ptr;$/;"	m	struct:header::__anon3d351ad10108	typeref:union:header *	file:
 push_off	kernel/spinlock.c	/^push_off(void)$/;"	f	typeref:typename:void
 putc	user/printf.c	/^putc(int fd, char c)$/;"	f	typeref:typename:void	file:
@@ -4481,6 +4485,7 @@ uint32	kernel/types.h	/^typedef unsigned int  uint32;$/;"	t	typeref:typename:uns
 uint64	kernel/kernel.asm	/^uint64$/;"	l
 uint64	kernel/types.h	/^typedef unsigned long uint64;$/;"	t	typeref:typename:unsigned long
 uint8	kernel/types.h	/^typedef unsigned char uint8;$/;"	t	typeref:typename:unsigned char
+ukvminit	kernel/vm.c	/^ukvminit(struct proc * p)$/;"	f	typeref:typename:pagetable_t
 uninit	user/usertests.c	/^char uninit[10000];$/;"	v	typeref:typename:char[10000]
 unlink	user/cat.asm	/^unlink:$/;"	l
 unlink	user/echo.asm	/^unlink:$/;"	l
@@ -4537,6 +4542,7 @@ uvmcreate	kernel/vm.c	/^uvmcreate()$/;"	f	typeref:typename:pagetable_t
 uvmdealloc	kernel/vm.c	/^uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)$/;"	f	typeref:typename:uint64
 uvmfree	kernel/vm.c	/^uvmfree(pagetable_t pagetable, uint64 sz)$/;"	f	typeref:typename:void
 uvminit	kernel/vm.c	/^uvminit(pagetable_t pagetable, uchar *src, uint sz)$/;"	f	typeref:typename:void
+uvmmap	kernel/vm.c	/^uvmmap(uint64 va, uint64 pa, uint64 sz, int perm)$/;"	f	typeref:typename:void
 uvmunmap	kernel/vm.c	/^uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)$/;"	f	typeref:typename:void
 va0	kernel/kernel.asm	/^    va0 = PGROUNDDOWN(dstva);$/;"	d
 va0	kernel/kernel.asm	/^    va0 = PGROUNDDOWN(srcva);$/;"	d
@@ -4550,8 +4556,10 @@ virtio_blk_outhdr	kernel/virtio_disk.c	/^  struct virtio_blk_outhdr {$/;"	s	func
 virtio_disk_init	kernel/virtio_disk.c	/^virtio_disk_init(void)$/;"	f	typeref:typename:void
 virtio_disk_intr	kernel/virtio_disk.c	/^virtio_disk_intr()$/;"	f	typeref:typename:void
 virtio_disk_rw	kernel/virtio_disk.c	/^virtio_disk_rw(struct buf *b, int write)$/;"	f	typeref:typename:void
+vmprint	kernel/vm.c	/^void vmprint(pagetable_t pagetable)$/;"	f	typeref:typename:void
 void	kernel/kernel.asm	/^void *$/;"	l
 void	kernel/kernel.asm	/^void uartstart();$/;"	l
+void	kernel/kernel.asm	/^void vmprint(pagetable_t pagetable)$/;"	l
 void	kernel/kernel.asm	/^void$/;"	l
 void	user/cat.asm	/^void *$/;"	l
 void	user/cat.asm	/^void$/;"	l

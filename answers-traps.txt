@@ -1,0 +1,6 @@
+register a0, a1, a2 contain the arguments of printf. a2 holds the number 13.
+There is no call to function f and g, these has been optimize by compiler.
+Printf syscall local in useraddress space of 0x678.
+After call printf in main the ra reg has changed into the return address of printf function.
+RISC-V is little-endian so data store from LSB to MSB. 0x00646c72 local in DRAM that 0x72 , 0x6c, 0x64, 0x00.
+in contrust big-endian store data as a order of 0x00, 0x64, 0x6c, 0x72

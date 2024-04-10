@@ -171,6 +171,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   return 0;
 }
 
+
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
@@ -448,4 +449,50 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+
+// Update old pagetable to new pagetable 
+// Which share one physical page.
+int
+uvmupdate(pagetable_t old, pagetable_t new, uint64 oldsz, uint64 newsz)
+{
+  pte_t *pte, *new_pte;
+  uint64 pa, new_pa, i;
+  uint flags;
+  if (newsz > oldsz)
+  {
+    oldsz = PGROUNDUP(oldsz);
+	for(i = oldsz; i < newsz; i += PGSIZE){
+	  new_pte = walk(new, i, 1);//find or alloc a pte
+	  new_pa = PTE2PA(*new_pte);
+	  if((pte = walk(old, i, 0)) == 0)
+		panic("uvmupdate: pte should exist");
+	  if((*pte & PTE_V) == 0)
+		panic("uvmupdate: page not present");
+	  pa = PTE2PA(*pte);
+	  if(new_pa == pa) continue;//this page has already been mapped.
+	  flags = PTE_FLAGS(*pte) & ~PTE_U;//kernel pagetable need no PTE_U permission.
+	  *new_pte = PA2PTE(pa) | flags;
+	}
+  }else if(newsz < oldsz){
+	  newsz = PGROUNDUP(newsz);
+	  for(i = newsz; i < oldsz; i+=PGSIZE){
+		  new_pte = walk(new, i, 0);//find a pte now not using
+		  *new_pte = 0;
+	  }
+  }
+  return 0;
+}
+
+//mapping userpagetable to kernel pagetable
+// flag 1 means mapping userpagetable in kernel_pagetable
+// flag 0 means unmapping userpagetable out of kernel_pagetable
+int
+kvmchangekpgtb(pagetable_t userpagetable, uint64 sz, int flag)
+{
+	if(flag == 1)
+		return uvmupdate(userpagetable, kernel_pagetable,0,sz);
+	else
+		return uvmupdate(userpagetable, kernel_pagetable, sz, 0);
 }

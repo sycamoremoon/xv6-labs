@@ -62,11 +62,23 @@ usertrap(void)
 
     // an interrupt will change sepc, scause, and sstatus,
     // so enable only now that we're done with those registers.
-    intr_on();
+    if(p->blocked == 0)intr_on();
 
     syscall();
   } else if((which_dev = devintr()) != 0){
-    // ok
+		// Device Interupt handled here.
+		// which_dev = 2 means timer interuprt
+		if (which_dev == 2){
+			// do timer handling here.
+			if (p->handler != 0 || p->ticks != 0){
+				if(p->left_ticks-- == 0){
+					timer_changestate(1);// store trapframe.
+					p->trapframe->epc = (uint64)p->handler;
+					p->left_ticks = p->ticks;
+					p->blocked = 1;
+				}
+			}
+		}
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -113,7 +125,8 @@ usertrapret(void)
   // set S Previous Privilege mode to User.
   unsigned long x = r_sstatus();
   x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
-  x |= SSTATUS_SPIE; // enable interrupts in user mode
+	if(p->blocked) x &= ~SSTATUS_SPIE; // disable interrupts in user mode. Preventint re-entrant into alarm func
+	else x |= SSTATUS_SPIE; // enable interrupts in user mode
   w_sstatus(x);
 
   // set S Exception Program Counter to the saved user pc.
@@ -219,3 +232,15 @@ devintr()
   }
 }
 
+//store 1 / load 0 trapframe
+void
+timer_changestate(int flag)
+{
+	struct trapframe * timer_trapframe;
+	struct proc * p = myproc();
+	timer_trapframe = p->trapframe + 1;
+	if(flag == 1)	//store trapframe into timer_trapframe
+		memmove((void*)timer_trapframe,(void*)p->trapframe,sizeof(struct trapframe));
+	else	//load timer_trapframe into trapframe 
+		memmove((void*)p->trapframe,(void*)timer_trapframe,sizeof(struct trapframe));
+}

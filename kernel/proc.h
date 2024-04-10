@@ -104,4 +104,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+	void (*handler)();           // Alarm handler 
+	int ticks;                   // The Totall Ticks period of call
+	int left_ticks;              // When it count down to 0,call fn
+	int blocked;                 // Blocked the device interupt
 };

@@ -503,3 +503,30 @@ sys_pipe(void)
   }
   return 0;
 }
+
+uint64
+sys_sigalarm(void)
+{
+	struct proc * p = myproc();
+	int ticks = 0;
+	uint64 handler = 0;
+	argint(0, &ticks);
+	argaddr(1, &handler);
+
+	p->ticks = ticks;
+	p->left_ticks = ticks;
+	p->handler = (void(*)())handler;
+
+	return 0;
+}
+
+uint64
+sys_sigreturn(void)
+{
+	struct proc * p = myproc();
+	if (p->handler != 0 || p->ticks != 0){
+		timer_changestate(0);//load trapframe before excuting alarm function.
+		p->blocked = 0;
+	}
+	return 0;
+}

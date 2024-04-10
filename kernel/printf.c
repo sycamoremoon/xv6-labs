@@ -133,3 +133,22 @@ printfinit(void)
   initlock(&pr.lock, "pr");
   pr.locking = 1;
 }
+
+//backtrace for debugging
+void
+backtrace(void)
+{
+	// notice that r_fp() returns the value of the virtual address of sp
+	// in order to get stored pc and fp which needs to shift 8/16 bit.
+	uint64 cur_fp = r_fp();
+	uint64 pre_fp = *(uint64 *)(cur_fp - 16);
+	printf("backtrace:\n");
+	while(pre_fp <= PGROUNDUP(cur_fp) && pre_fp >= PGROUNDDOWN(cur_fp))
+	{
+		// print current stored pc
+		printf("%p\n",*(uint64 *)(cur_fp - 8));
+		cur_fp = pre_fp;
+		pre_fp = *(uint64 *)(cur_fp - 16);
+	}
+}
+

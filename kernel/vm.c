@@ -5,6 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
+#include "spinlock.h"
+#include "proc.h"
 
 /*
  * the kernel's page table.
@@ -102,7 +104,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
 
   pte = walk(pagetable, va, 0);
   if(pte == 0)
-    return 0;
+			return 0;
   if((*pte & PTE_V) == 0)
     return 0;
   if((*pte & PTE_U) == 0)
@@ -178,12 +180,12 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   if((va % PGSIZE) != 0)
     panic("uvmunmap: not aligned");
-
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
-    if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+    if((pte = walk(pagetable, a, 0)) == 0){
+			continue;
+		}
     if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+			continue;
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("uvmunmap: not a leaf");
     if(do_free){
@@ -315,9 +317,13 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
+      //panic("uvmcopy: pte should exist");
+			continue;
+    if((*pte & PTE_V) == 0){
+			pte_t * lazy_pte = walk(new, i, 1);
+			* lazy_pte = 0;
+			continue;
+		}
     pa = PTE2PA(*pte);
     flags = PTE_FLAGS(*pte);
     if((mem = kalloc()) == 0)
@@ -355,12 +361,26 @@ int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
-
+	struct proc * p = myproc();
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
+    if(pa0 == 0){
+			if(dstva < p->sz && dstva >= PGROUNDUP(p->trapframe->sp)){
+				void* mem = kalloc();
+				if(mem != 0) {
+					memset(mem, 0, PGSIZE);
+					if(mappages(pagetable, va0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_U) != 0)
+						kfree(mem);
+					pa0 = walkaddr(pagetable, va0);
+				}
+				else{
+					printf("copyout: out of memory\n");
+					exit(-1);
+				}
+			}else 
+				return -1;
+		}
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
@@ -381,11 +401,26 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   uint64 n, va0, pa0;
 
+	struct proc * p = myproc();
   while(len > 0){
     va0 = PGROUNDDOWN(srcva);
     pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
+    if(pa0 == 0){
+			if(srcva < p->sz && srcva >= PGROUNDUP(p->trapframe->sp)){
+				void* mem = kalloc();
+				if(mem != 0) {
+					memset(mem, 0, PGSIZE);
+					if(mappages(pagetable, va0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_U) != 0)
+						kfree(mem);
+					pa0 = walkaddr(pagetable, va0);
+				}
+				else{
+					printf("copyin: out of memory\n");
+					exit(-1);
+				}
+			}else
+				return -1;
+		}
     n = PGSIZE - (srcva - va0);
     if(n > len)
       n = len;
@@ -440,3 +475,36 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+//used for print pagetable mapping and physical adddress.
+void vmprint(pagetable_t pagetable)
+{
+	printf("page table %p\n",pagetable);
+	pte_t pte_top;
+  pte_t	pte_mid;
+	//pte_t pte_low;
+	for(int i = 0; i < 512; i++)
+	{
+		pte_top = pagetable[i];
+		if(pte_top & PTE_V)
+		{ 
+			printf("..%d: pte %p pa %p\n",i, pte_top, PTE2PA(pte_top));
+			pagetable_t mid_pagetable = (pagetable_t)PTE2PA(pte_top);
+			for(int j = 0; j < 512; j++)
+			{
+				pte_mid = mid_pagetable[j];
+				if(pte_mid & PTE_V)
+				{
+					printf(".. .. %d: pte %p pa %p\n",j ,pte_mid, PTE2PA(pte_mid));
+//					pagetable_t low_pagetable = (pagetable_t)PTE2PA(pte_mid);
+//					for(int k = 0; k < 512; k++)
+//					{
+//						pte_low = low_pagetable[k];
+//						if(pte_low & PTE_V) printf(".. .. ..%d: pte %p pa %p\n",k ,pte_low, PTE2PA(pte_low));
+//					}
+				}
+			}
+		}
+	}
+}
+

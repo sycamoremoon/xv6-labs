@@ -67,7 +67,29 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if(r_scause() == 15 || r_scause() == 13){
+		int flag = r_scause() == 15 ? PTE_W|PTE_R|PTE_U : PTE_R|PTE_U;
+		//printf("store page fault: %p\n", r_stval());
+		// Only need consider the top limit, bottom limit has been considered in sys_sbrk()
+		if(r_stval() < p->sz && r_stval() >= PGROUNDUP(p->trapframe->sp)){
+			void* mem = kalloc();
+			if(mem == 0){
+				//printf("From usertrap:out of memory\n");
+				exit(-1);
+			}
+			memset(mem, 0, PGSIZE);
+			if(mappages(p->pagetable, PGROUNDDOWN(r_stval()), PGSIZE, (uint64)mem, flag) != 0){
+				printf("mapping failed.\n");
+				kfree(mem);
+			}
+		}else{
+			//printf("reference page out of user address space:\n");
+			//printf("  pid=%d epc=%p stval=%p\n", p->pid, r_sepc(), r_stval());
+			p->killed = 1;
+		}
+	} 
+	// unhandled trap type
+	else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;
@@ -143,12 +165,12 @@ kerneltrap()
   if(intr_get() != 0)
     panic("kerneltrap: interrupts enabled");
 
+		
   if((which_dev = devintr()) == 0){
-    printf("scause %p\n", scause);
-    printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
-    panic("kerneltrap");
-  }
-
+		printf("scause %p\n", scause);
+		printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
+		panic("kerneltrap");
+	}
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
     yield();
@@ -213,8 +235,7 @@ devintr()
     w_sip(r_sip() & ~2);
 
     return 2;
-  } else {
+	}else{
     return 0;
   }
 }
-

@@ -41,14 +41,20 @@ sys_wait(void)
 uint64
 sys_sbrk(void)
 {
+	struct proc *p = myproc();
   int addr;
   int n;
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = myproc()->sz;
-  if(growproc(n) < 0)
-    return -1;
+  addr = p->sz;
+	if(n >= 0) 
+		p->sz = p->sz+n;
+	else if(p->sz+n >= PGROUNDUP(p->trapframe->sp)){
+		uvmunmap(p->pagetable, PGROUNDUP(p->sz+n), (PGROUNDUP(p->sz)-PGROUNDUP(p->sz+n))/PGSIZE, 1);
+		p->sz = p->sz+n;
+	} else	//shrink into stack page
+		return -1;
   return addr;
 }
 

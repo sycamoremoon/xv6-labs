@@ -317,11 +317,8 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0)
-      //panic("uvmcopy: pte should exist");
 			continue;
     if((*pte & PTE_V) == 0){
-			pte_t * lazy_pte = walk(new, i, 1);
-			* lazy_pte = 0;
 			continue;
 		}
     pa = PTE2PA(*pte);
@@ -476,35 +473,5 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
-//used for print pagetable mapping and physical adddress.
-void vmprint(pagetable_t pagetable)
-{
-	printf("page table %p\n",pagetable);
-	pte_t pte_top;
-  pte_t	pte_mid;
-	//pte_t pte_low;
-	for(int i = 0; i < 512; i++)
-	{
-		pte_top = pagetable[i];
-		if(pte_top & PTE_V)
-		{ 
-			printf("..%d: pte %p pa %p\n",i, pte_top, PTE2PA(pte_top));
-			pagetable_t mid_pagetable = (pagetable_t)PTE2PA(pte_top);
-			for(int j = 0; j < 512; j++)
-			{
-				pte_mid = mid_pagetable[j];
-				if(pte_mid & PTE_V)
-				{
-					printf(".. .. %d: pte %p pa %p\n",j ,pte_mid, PTE2PA(pte_mid));
-//					pagetable_t low_pagetable = (pagetable_t)PTE2PA(pte_mid);
-//					for(int k = 0; k < 512; k++)
-//					{
-//						pte_low = low_pagetable[k];
-//						if(pte_low & PTE_V) printf(".. .. ..%d: pte %p pa %p\n",k ,pte_low, PTE2PA(pte_low));
-//					}
-				}
-			}
-		}
-	}
-}
+
 

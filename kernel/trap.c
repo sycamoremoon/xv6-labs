@@ -70,7 +70,6 @@ usertrap(void)
   } else if(r_scause() == 15 || r_scause() == 13){
 		int flag = r_scause() == 15 ? PTE_W|PTE_R|PTE_U : PTE_R|PTE_U;
 		//printf("store page fault: %p\n", r_stval());
-		// Only need consider the top limit, bottom limit has been considered in sys_sbrk()
 		if(r_stval() < p->sz && r_stval() >= PGROUNDUP(p->trapframe->sp)){
 			void* mem = kalloc();
 			if(mem == 0){

@@ -2776,6 +2776,10 @@ main(int argc, char *argv[])
     if((justone == 0) || strcmp(t->s, justone) == 0) {
       if(!run(t->f, t->s))
         fail = 1;
+			//int free = 0;
+			 //if((free = countfree()) < free0){
+					//printf("FAILED -- lost some free pages %d (out of %d)\n", free, free0);
+				//}
     }
   }
 

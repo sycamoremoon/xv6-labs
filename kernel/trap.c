@@ -11,6 +11,10 @@ uint ticks;
 
 extern char trampoline[], uservec[], userret[];
 
+extern char end[]; // first address after kernel.
+                   // defined by kernel.ld.
+extern int pagerfcnt[];//reference count for each page.
+											 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -67,7 +71,27 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+  } else if(r_scause() == 15){
+		pte_t * pte = walk(p->pagetable, r_stval(), 0);
+		uint64 pa = PTE2PA(*pte);
+		uint64 flag = PTE_FLAGS(*pte);
+		if (*pte & PTE_COW){
+			if(pagerfcnt[(pa - FREESTART)/PGSIZE] > 1){
+			//COW write pagefault
+			void* mem = kalloc();
+			if(mem == 0) exit(-1);
+			memmove(mem, (void*)pa, PGSIZE);
+			*pte = PA2PTE(mem) | flag | PTE_W;
+			*pte &= ~PTE_COW;
+			pagerfcnt[(pa - FREESTART)/PGSIZE] -= 1;
+			}else{ //only one reference to the last page
+				*pte |= PTE_W;
+				*pte &= ~PTE_COW;
+			}
+		}else{
+			//situation other than COW
+		}
+ 	}	else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

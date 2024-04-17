@@ -15,6 +15,10 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
+extern char end[]; // first address after kernel.
+                   // defined by kernel.ld.
+extern int pagerfcnt[];//reference count for each page.
+																				
 /*
  * create a direct-map page table for the kernel.
  */
@@ -308,31 +312,22 @@ uvmfree(pagetable_t pagetable, uint64 sz)
 int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
-  pte_t *pte;
+  pte_t *oldpte, *newpte;
   uint64 pa, i;
-  uint flags;
-  char *mem;
 
   for(i = 0; i < sz; i += PGSIZE){
-    if((pte = walk(old, i, 0)) == 0)
+    if((oldpte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
+    if((*oldpte & PTE_V) == 0)
       panic("uvmcopy: page not present");
-    pa = PTE2PA(*pte);
-    flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
-      goto err;
-    }
+		pa = PTE2PA(*oldpte);
+		*oldpte &= ~PTE_W;
+		*oldpte |= PTE_COW;
+		newpte = walk(new, i, 1);
+		*newpte = *oldpte;
+		pagerfcnt[(pa - FREESTART)/PGSIZE] += 1;
   }
   return 0;
-
- err:
-  uvmunmap(new, 0, i / PGSIZE, 1);
-  return -1;
 }
 
 // mark a PTE invalid for user access.
@@ -355,12 +350,34 @@ int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
+	pte_t *pte;
+	uint64 flag;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
+    pa0 = walkaddr(pagetable, va0);//pa is align
+		if(va0 > MAXVA) return -1;
+		pte = walk(pagetable, va0, 0);
     if(pa0 == 0)
       return -1;
+
+		if (*pte & PTE_COW){
+			if(pagerfcnt[(pa0 - FREESTART)/PGSIZE] > 1){
+			//COW write pagefault
+			flag = PTE_FLAGS(*pte);
+			void* mem = kalloc();
+			if(mem == 0) exit(-1);
+			memmove(mem, (void*)pa0, PGSIZE);
+			*pte = PA2PTE(mem) | flag | PTE_W;
+			*pte &= ~PTE_COW;
+			pagerfcnt[(pa0 - FREESTART)/PGSIZE] -= 1;
+			pa0 = (uint64)mem;
+			}else{ //only one reference to the last page
+				*pte |= PTE_W;
+				*pte &= ~PTE_COW;
+			}
+		}
+
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;

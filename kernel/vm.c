@@ -18,6 +18,7 @@ extern char trampoline[]; // trampoline.S
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 extern int pagerfcnt[];//reference count for each page.
+
 																				
 /*
  * create a direct-map page table for the kernel.
@@ -325,7 +326,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 		*oldpte |= PTE_COW;
 		newpte = walk(new, i, 1);
 		*newpte = *oldpte;
-		pagerfcnt[(pa - FREESTART)/PGSIZE] += 1;
+		incref(pa);
   }
   return 0;
 }
@@ -355,22 +356,24 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);//pa is align
 		if(va0 > MAXVA) return -1;
 		pte = walk(pagetable, va0, 0);
+		if(pte == 0) return -1;
+		pa0 = PTE2PA(*pte);
     if(pa0 == 0)
       return -1;
 
 		if (*pte & PTE_COW){
-			if(pagerfcnt[(pa0 - FREESTART)/PGSIZE] > 1){
+			int refer = getref(pa0);
+			if(refer > 1){
 			//COW write pagefault
 			flag = PTE_FLAGS(*pte);
 			void* mem = kalloc();
 			if(mem == 0) exit(-1);
 			memmove(mem, (void*)pa0, PGSIZE);
-			*pte = PA2PTE(mem) | flag | PTE_W;
+			*pte = PA2PTE((uint64)mem) | flag | PTE_W;
 			*pte &= ~PTE_COW;
-			pagerfcnt[(pa0 - FREESTART)/PGSIZE] -= 1;
+			kfree((void*)pa0);
 			pa0 = (uint64)mem;
 			}else{ //only one reference to the last page
 				*pte |= PTE_W;

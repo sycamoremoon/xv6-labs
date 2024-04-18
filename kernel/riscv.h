@@ -325,8 +325,8 @@ sfence_vma()
 
 #define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
 #define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
-
 #define FREESTART PGROUNDUP(0x80046000L)
+#define PA2REF(pa)  (pagerfcnt[(PGROUNDDOWN(pa) - FREESTART)/PGSIZE])
 
 #define PTE_V (1L << 0) // valid
 #define PTE_R (1L << 1)

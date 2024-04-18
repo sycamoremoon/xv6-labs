@@ -36,8 +36,10 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE){
+		PA2REF((uint64)p) = 1;
     kfree(p);
+	}
 }
 
 // Free the page of physical memory pointed at by v,
@@ -52,20 +54,26 @@ kfree(void *pa)
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
-	if(pagerfcnt[((uint64)pa - FREESTART)/PGSIZE] >= 1){
-		pagerfcnt[((uint64)pa - FREESTART)/PGSIZE] -= 1;
-	}
-	if(pagerfcnt[((uint64)pa - FREESTART)/PGSIZE] == 0){
-		// Fill with junk to catch dangling refs.
-		memset(pa, 1, PGSIZE);
+	acquire(&kmem.lock);
+	if(PA2REF((uint64)pa) < 0)
+		panic("kfree ref\n");
+	PA2REF((uint64)pa) -= 1;
+	int tmp = PA2REF((uint64)pa);
+	release(&kmem.lock);
 
-		r = (struct run*)pa;
+	if(tmp != 0)
+		return;
+	
+	// Fill with junk to catch dangling refs.
+	memset(pa, 1, PGSIZE);
 
-		acquire(&kmem.lock);
-		r->next = kmem.freelist;
-		kmem.freelist = r;
-		release(&kmem.lock);
-	}
+	r = (struct run*)pa;
+
+	acquire(&kmem.lock);
+	r->next = kmem.freelist;
+	kmem.freelist = r;
+	release(&kmem.lock);
+
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -80,9 +88,8 @@ kalloc(void)
   r = kmem.freelist;
   if(r){
     kmem.freelist = r->next;
-		uint32 index = ((uint64)r-FREESTART)/PGSIZE;
-		if(pagerfcnt[index] != 0) panic("kalloc:refer not 0");
-		pagerfcnt[index] += 1;
+		if(PA2REF((uint64)r) != 0) panic("kalloc ref\n");
+		PA2REF((uint64)r) = 1;
 	}
   release(&kmem.lock);
 
@@ -90,3 +97,27 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
+//increase the reference count to single page
+void
+incref(uint64 pa)
+{
+	acquire(&kmem.lock);
+	if(PA2REF(pa) == 0)
+		panic("increase ref\n");
+	PA2REF(pa) += 1;
+	release(&kmem.lock);
+}
+
+int
+getref(uint64 pa)
+{
+	int ref = 0;
+	acquire(&kmem.lock);
+	if(PA2REF(pa) == 0)
+		panic("get refernce \n");
+	ref = PA2REF(pa);
+	release(&kmem.lock);
+	return ref;
+}
+

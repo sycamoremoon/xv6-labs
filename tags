@@ -75,6 +75,7 @@ FD_DEVICE	kernel/file.h	/^  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;
 FD_INODE	kernel/file.h	/^  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;$/;"	e	enum:file::__anonc1f1ee2b0103
 FD_NONE	kernel/file.h	/^  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;$/;"	e	enum:file::__anonc1f1ee2b0103
 FD_PIPE	kernel/file.h	/^  enum { FD_NONE, FD_PIPE, FD_INODE, FD_DEVICE } type;$/;"	e	enum:file::__anonc1f1ee2b0103
+FREESTART	kernel/riscv.h	/^#define FREESTART /;"	d
 FSMAGIC	kernel/fs.h	/^#define FSMAGIC /;"	d
 FSSIZE	kernel/param.h	/^#define FSSIZE /;"	d
 FWDPORT	Makefile	/^FWDPORT = $(shell expr `id -u` % 5000 + 25999)$/;"	m
@@ -155,6 +156,7 @@ O_RDWR	kernel/fcntl.h	/^#define O_RDWR /;"	d
 O_TRUNC	kernel/fcntl.h	/^#define O_TRUNC /;"	d
 O_WRONLY	kernel/fcntl.h	/^#define O_WRONLY /;"	d
 PA2PTE	kernel/riscv.h	/^#define PA2PTE(/;"	d
+PA2REF	kernel/riscv.h	/^#define PA2REF(/;"	d
 PART_TOTAL	gradelib.py	/^PART_TOTAL = PART_POSSIBLE = 0$/;"	v
 PGROUNDDOWN	kernel/riscv.h	/^#define PGROUNDDOWN(/;"	d
 PGROUNDUP	kernel/riscv.h	/^#define PGROUNDUP(/;"	d
@@ -3246,6 +3248,7 @@ filesz	kernel/elf.h	/^  uint64 filesz;$/;"	m	struct:proghdr	typeref:typename:uin
 filetest	user/cowtest.c	/^filetest()$/;"	f	typeref:typename:void
 filewrite	kernel/file.c	/^filewrite(struct file *f, uint64 addr, int n)$/;"	f	typeref:typename:int
 first	kernel/kernel.asm	/^    first = 0;$/;"	d
+flag	kernel/kernel.asm	/^			flag = PTE_FLAGS(*pte);$/;"	d
 flags	kernel/elf.h	/^  uint flags;$/;"	m	struct:elfhdr	typeref:typename:uint
 flags	kernel/elf.h	/^  uint32 flags;$/;"	m	struct:proghdr	typeref:typename:uint32
 flags	kernel/virtio.h	/^  uint16 flags;$/;"	m	struct:UsedArea	typeref:typename:uint16
@@ -3368,6 +3371,7 @@ getpid	user/usertests.asm	/^getpid:$/;"	l
 getpid	user/usys.S	/^getpid:$/;"	l
 getpid	user/wc.asm	/^getpid:$/;"	l
 getpid	user/zombie.asm	/^getpid:$/;"	l
+getref	kernel/kalloc.c	/^getref(pa)$/;"	f	typeref:typename:int
 gets	user/ulib.c	/^gets(char *buf, int max)$/;"	f	typeref:typename:char *
 gettoken	user/sh.c	/^gettoken(char **ps, char *es, char **q, char **eq)$/;"	f	typeref:typename:int
 go	user/grind.c	/^go(int which_child)$/;"	f	typeref:typename:void
@@ -3420,6 +3424,7 @@ idup	kernel/fs.c	/^idup(struct inode *ip)$/;"	f	typeref:struct:inode *
 iget	kernel/fs.c	/^iget(uint dev, uint inum)$/;"	f	typeref:struct:inode *	file:
 iinit	kernel/fs.c	/^iinit()$/;"	f	typeref:typename:void
 ilock	kernel/fs.c	/^ilock(struct inode *ip)$/;"	f	typeref:typename:void
+incref	kernel/kalloc.c	/^incref(uint64 pa)$/;"	f	typeref:typename:void
 info	kernel/virtio_disk.c	/^  } info[NUM];$/;"	m	struct:disk	typeref:struct:disk::__anon0ecc7a2d0108[]	file:
 init	user/initcode.S	/^init:$/;"	l
 initcode	kernel/proc.c	/^uchar initcode[] = {$/;"	v	typeref:typename:uchar[]
@@ -3887,10 +3892,10 @@ p	user/zombie.asm	/^  p = sbrk(nu * sizeof(Header));$/;"	d
 pa	kernel/kernel.asm	/^		pa = PTE2PA(*oldpte);$/;"	d
 pa	kernel/kernel.asm	/^    pa = walkaddr(pagetable, va + i);$/;"	d
 pa	kernel/kernel.asm	/^  pa = PTE2PA(*pte);$/;"	d
+pa0	kernel/kernel.asm	/^		pa0 = PTE2PA(*pte);$/;"	d
 pa0	kernel/kernel.asm	/^    pa0 = walkaddr(pagetable, va0);$/;"	d
-pa0	kernel/kernel.asm	/^    pa0 = walkaddr(pagetable, va0);\/\/pa is align$/;"	d
 paddr	kernel/elf.h	/^  uint64 paddr;$/;"	m	struct:proghdr	typeref:typename:uint64
-pagerfcnt	kernel/kalloc.c	/^int pagerfcnt[(PHYSTOP-PGROUNDUP((uint64)0x80246000))\/PGSIZE] = {0};\/\/reference count for eac/;"	v	typeref:typename:int[]
+pagerfcnt	kernel/kalloc.c	/^int pagerfcnt[(PHYSTOP-FREESTART)\/PGSIZE] = {0};\/\/reference count for each page.$/;"	v	typeref:typename:int[]
 pages	kernel/virtio_disk.c	/^  char pages[2*PGSIZE];$/;"	m	struct:disk	typeref:typename:char[]	file:
 pagetable	kernel/kernel.asm	/^      pagetable = (pagetable_t)PTE2PA(*pte);$/;"	d
 pagetable	kernel/kernel.asm	/^  pagetable = (pagetable_t) kalloc();$/;"	d

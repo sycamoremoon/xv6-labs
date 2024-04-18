@@ -14,6 +14,8 @@ extern char trampoline[], uservec[], userret[];
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 extern int pagerfcnt[];//reference count for each page.
+
+extern struct spinlock reflock;
 											 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
@@ -76,18 +78,20 @@ usertrap(void)
 		uint64 pa = PTE2PA(*pte);
 		uint64 flag = PTE_FLAGS(*pte);
 		if (*pte & PTE_COW){
-			if(pagerfcnt[(pa - FREESTART)/PGSIZE] > 1){
+			int refer = getref(pa);
+			if(refer > 1){
 			//COW write pagefault
 			void* mem = kalloc();
 			if(mem == 0) exit(-1);
 			memmove(mem, (void*)pa, PGSIZE);
-			*pte = PA2PTE(mem) | flag | PTE_W;
+			*pte = PA2PTE((uint64)mem) | flag | PTE_W;
 			*pte &= ~PTE_COW;
-			pagerfcnt[(pa - FREESTART)/PGSIZE] -= 1;
+			kfree((void*)pa);
 			}else{ //only one reference to the last page
 				*pte |= PTE_W;
 				*pte &= ~PTE_COW;
 			}
+
 		}else{
 			//situation other than COW
 		}

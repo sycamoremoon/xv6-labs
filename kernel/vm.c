@@ -352,35 +352,28 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
   uint64 n, va0, pa0;
 	pte_t *pte;
-	uint64 flag;
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
-		if(va0 > MAXVA) return -1;
+		if(va0 > MAXVA)
+			return -1;
+
 		pte = walk(pagetable, va0, 0);
-		if(pte == 0) return -1;
-		pa0 = PTE2PA(*pte);
-    if(pa0 == 0)
-      return -1;
+		if(pte == 0) 
+			return -1;
+		
+		if(((*pte) & PTE_V || (*pte) & PTE_U) == 0)// check for validation
+			return -1;
 
-		if (*pte & PTE_COW){
-			int refer = getref(pa0);
-			if(refer > 1){
-			//COW write pagefault
-			flag = PTE_FLAGS(*pte);
-			void* mem = kalloc();
-			if(mem == 0) exit(-1);
-			memmove(mem, (void*)pa0, PGSIZE);
-			*pte = PA2PTE((uint64)mem) | flag | PTE_W;
-			*pte &= ~PTE_COW;
-			kfree((void*)pa0);
-			pa0 = (uint64)mem;
-			}else{ //only one reference to the last page
-				*pte |= PTE_W;
-				*pte &= ~PTE_COW;
+		if((*pte & PTE_W) == 0){
+			if(cowfault(pagetable, va0) < 0)
+					return -1;
+			else{
+				// do other situation here.
 			}
-		}
+		}	
 
+		pa0 = PTE2PA(*pte);
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
@@ -460,3 +453,38 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+//handle the case of Copy On Write fault.
+//return -1 if error happened
+//return 0 if going on right or nothing happened.
+int
+cowfault(pagetable_t pagetable, uint64 va)
+{
+	pte_t * pte;
+	if(va > MAXVA)// avoid tricky virtual address.
+		return -1;
+
+	if((pte = walk(pagetable, va, 0)) == 0)//avoid non-mapped va.
+		return -1;
+
+	if((*pte & PTE_COW) == 0)// not the COW case normal return 
+		return 0;
+
+	if(((*pte) & PTE_V || (*pte) & PTE_U) == 0)//avoid pages like guard page or trampoline or trapframe...
+		return -1;
+	uint64 pa = PTE2PA(*pte);
+	if(getref(pa) == 1){
+		*pte |= PTE_W;
+		*pte &= ~PTE_COW;
+	}else{
+		int flag = PTE_FLAGS(*pte);
+		void *mem = kalloc();
+		if(mem == 0) return -1;
+		memmove(mem, (void*)pa, PGSIZE);
+		*pte = PA2PTE((uint64)mem) | flag | PTE_W;
+		*pte &= ~PTE_COW;
+		kfree((void*)pa);
+	}
+	return 0;
+}
+

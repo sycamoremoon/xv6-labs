@@ -15,8 +15,6 @@ extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 extern int pagerfcnt[];//reference count for each page.
 
-extern struct spinlock reflock;
-											 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
 
@@ -74,28 +72,11 @@ usertrap(void)
   } else if((which_dev = devintr()) != 0){
     // ok
   } else if(r_scause() == 15){
-		pte_t * pte = walk(p->pagetable, r_stval(), 0);
-		uint64 pa = PTE2PA(*pte);
-		uint64 flag = PTE_FLAGS(*pte);
-		if (*pte & PTE_COW){
-			int refer = getref(pa);
-			if(refer > 1){
-			//COW write pagefault
-			void* mem = kalloc();
-			if(mem == 0) exit(-1);
-			memmove(mem, (void*)pa, PGSIZE);
-			*pte = PA2PTE((uint64)mem) | flag | PTE_W;
-			*pte &= ~PTE_COW;
-			kfree((void*)pa);
-			}else{ //only one reference to the last page
-				*pte |= PTE_W;
-				*pte &= ~PTE_COW;
-			}
-
-		}else{
-			//situation other than COW
-		}
+		if(cowfault(p->pagetable, r_stval()) < 0)
+			p->killed = 1;
+		//do other situation here.
  	}	else {
+		printf("process : %s\n",p->name);
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     p->killed = 1;

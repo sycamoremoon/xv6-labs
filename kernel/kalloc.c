@@ -103,7 +103,7 @@ void
 incref(uint64 pa)
 {
 	acquire(&kmem.lock);
-	if(PA2REF(pa) == 0)
+	if(PA2REF(pa) <= 0)
 		panic("increase ref\n");
 	PA2REF(pa) += 1;
 	release(&kmem.lock);
@@ -114,10 +114,12 @@ getref(uint64 pa)
 {
 	int ref = 0;
 	acquire(&kmem.lock);
-	if(PA2REF(pa) == 0)
-		panic("get refernce \n");
+	if(PA2REF(pa) <= 0)
+		panic("get reference \n");
 	ref = PA2REF(pa);
 	release(&kmem.lock);
 	return ref;
 }
+
+
 

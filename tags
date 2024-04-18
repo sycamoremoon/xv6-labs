@@ -1933,6 +1933,7 @@ copyinstr3	user/usertests.c	/^copyinstr3(char *s)$/;"	f	typeref:typename:void
 copyout	kernel/vm.c	/^copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)$/;"	f	typeref:typename:int
 copyout	user/usertests.c	/^copyout(char *s)$/;"	f	typeref:typename:void
 countfree	user/usertests.c	/^countfree()$/;"	f	typeref:typename:int
+cowfault	kernel/vm.c	/^cowfault(pagetable_t pagetable, uint64 va)$/;"	f	typeref:typename:int
 cpu	kernel/proc.h	/^struct cpu {$/;"	s
 cpu	kernel/spinlock.h	/^  struct cpu *cpu;   \/\/ The cpu holding the lock.$/;"	m	struct:spinlock	typeref:struct:cpu *
 cpuid	kernel/proc.c	/^cpuid()$/;"	f	typeref:typename:int
@@ -3371,7 +3372,7 @@ getpid	user/usertests.asm	/^getpid:$/;"	l
 getpid	user/usys.S	/^getpid:$/;"	l
 getpid	user/wc.asm	/^getpid:$/;"	l
 getpid	user/zombie.asm	/^getpid:$/;"	l
-getref	kernel/kalloc.c	/^getref(pa)$/;"	f	typeref:typename:int
+getref	kernel/kalloc.c	/^getref(uint64 pa)$/;"	f	typeref:typename:int
 gets	user/ulib.c	/^gets(char *buf, int max)$/;"	f	typeref:typename:char *
 gettoken	user/sh.c	/^gettoken(char **ps, char *es, char **q, char **eq)$/;"	f	typeref:typename:int
 go	user/grind.c	/^go(int which_child)$/;"	f	typeref:typename:void
@@ -3892,6 +3893,7 @@ p	user/zombie.asm	/^  p = sbrk(nu * sizeof(Header));$/;"	d
 pa	kernel/kernel.asm	/^		pa = PTE2PA(*oldpte);$/;"	d
 pa	kernel/kernel.asm	/^    pa = walkaddr(pagetable, va + i);$/;"	d
 pa	kernel/kernel.asm	/^  pa = PTE2PA(*pte);$/;"	d
+pa0	kernel/kernel.asm	/^			pa0 = (uint64)mem;$/;"	d
 pa0	kernel/kernel.asm	/^		pa0 = PTE2PA(*pte);$/;"	d
 pa0	kernel/kernel.asm	/^    pa0 = walkaddr(pagetable, va0);$/;"	d
 paddr	kernel/elf.h	/^  uint64 paddr;$/;"	m	struct:proghdr	typeref:typename:uint64
@@ -4089,6 +4091,7 @@ redircmd	user/sh.c	/^redircmd(struct cmd *subcmd, char *file, char *efile, int m
 redircmd	user/sh.c	/^struct redircmd {$/;"	s	file:
 ref	kernel/file.h	/^  int ref;            \/\/ Reference count$/;"	m	struct:inode	typeref:typename:int
 ref	kernel/file.h	/^  int ref; \/\/ reference count$/;"	m	struct:file	typeref:typename:int
+ref	kernel/kernel.asm	/^	ref = PA2REF(pa);$/;"	d
 refcnt	kernel/buf.h	/^  uint refcnt;$/;"	m	struct:buf	typeref:typename:uint
 register_test	gradelib.py	/^    def register_test(fn, title=title):$/;"	f	function:test	file:
 release	kernel/spinlock.c	/^release(struct spinlock *lk)$/;"	f	typeref:typename:void

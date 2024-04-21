@@ -66,10 +66,11 @@ mycpu(void) {
 // Return the current struct proc *, or zero if none.
 struct proc*
 myproc(void) {
-  push_off();
+  push_off();		// disable interupt to avoid thread switching
+								// it's possible to get tp refer to other CPU if interupt enable
   struct cpu *c = mycpu();
   struct proc *p = c->proc;
-  pop_off();
+  pop_off();		// after get right process, thread switching does not matter.
   return p;
 }
 
@@ -122,7 +123,7 @@ found:
   }
 
   // Set up new context to start executing at forkret,
-  // which returns to user space.
+  // which returns to user space when scheduler call this process
   memset(&p->context, 0, sizeof(p->context));
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
@@ -453,6 +454,8 @@ wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
+// kernel scheduler thread calling swtch to process' kernel thread
+// process' kernel thread calling swtch to kernel scheduler thread.
 void
 scheduler(void)
 {
@@ -476,6 +479,8 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+				//every CPU start scheduling by store its context
+				// next time switch kernel thread resume CPU context.
         swtch(&c->context, &p->context);
 
         // Process is done running for now.
@@ -514,7 +519,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
+  swtch(&p->context, &mycpu()->context);// save current state to p'context,load context from cpu
   mycpu()->intena = intena;
 }
 
@@ -523,7 +528,7 @@ void
 yield(void)
 {
   struct proc *p = myproc();
-  acquire(&p->lock);
+  acquire(&p->lock); //  protect invariants on process'state and context fields
   p->state = RUNNABLE;
   sched();
   release(&p->lock);

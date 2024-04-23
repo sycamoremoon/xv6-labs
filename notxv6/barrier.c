@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 static int nthread = 1;
-static int round = 0;
+static int round = 1;
 
 struct barrier {
   pthread_mutex_t barrier_mutex;
@@ -30,7 +30,30 @@ barrier()
   // Block until all threads have called barrier() and
   // then increment bstate.round.
   //
-  
+	pthread_mutex_lock(&bstate.barrier_mutex);
+	if(nthread == 1) bstate.round ++;
+	else {
+		//while(round == bstate.round)
+			//printf("round == bstate.round\n");
+		if(bstate.nthread+1 != nthread){
+			bstate.nthread ++;
+			while(bstate.nthread != nthread || round-1 == bstate.round){
+				pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
+			}
+			bstate.nthread = (bstate.nthread==nthread) ? bstate.nthread-2: bstate.nthread-1;
+			if(bstate.nthread == 0) round = bstate.round + 1;
+		}else{
+			bstate.round ++;//only if all thread called barrier()
+			bstate.nthread ++;
+			if(bstate.nthread == nthread){
+				pthread_cond_broadcast(&bstate.barrier_cond);
+			}else{
+				printf("error: nthread not equal\n");
+				exit(-1);
+			}
+		}
+	}
+  pthread_mutex_unlock(&bstate.barrier_mutex);
 }
 
 static void *
@@ -42,7 +65,8 @@ thread(void *xa)
 
   for (i = 0; i < 20000; i++) {
     int t = bstate.round;
-    assert (i == t);
+		printf("threadid: %ld, i: %d, t:%d round:%d\n",pthread_self(), i,t,round);
+    assert (i == t);// panic when i not equal to t
     barrier();
     usleep(random() % 100);
   }
@@ -62,7 +86,7 @@ main(int argc, char *argv[])
     fprintf(stderr, "%s: %s nthread\n", argv[0], argv[0]);
     exit(-1);
   }
-  nthread = atoi(argv[1]);
+  nthread = atoi(argv[1]);//global variable record the number of thread.
   tha = malloc(sizeof(pthread_t) * nthread);
   srandom(0);
 

@@ -568,10 +568,15 @@ sleep(void *chan, struct spinlock *lk)
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
   // so it's okay to release lk.
+	
+	// two lock protect different invariant:
+	// p->lock protect the process state do not being change
+	// lk protect invariant wakeup() calling after sleep()
   if(lk != &p->lock){  //DOC: sleeplock0
     acquire(&p->lock);  //DOC: sleeplock1
     release(lk);
   }
+	/*  before this point sleep might hold both of condition lock and p->lock */
 
   // Go to sleep.
   p->chan = chan;
@@ -597,6 +602,8 @@ wakeup(void *chan)
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
+		// The earlest time p->lock release is when swtch() return to the function of scheduler();
+		// so at this time, a process is fully sleep, didn't violate invariant.
     acquire(&p->lock);
     if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;

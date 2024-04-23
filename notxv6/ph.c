@@ -16,6 +16,8 @@ struct entry {
 struct entry *table[NBUCKET];
 int keys[NKEYS];
 int nthread = 1;
+// protect the global variable table, list of entry, value in entry.
+pthread_mutex_t hashlock = PTHREAD_MUTEX_INITIALIZER;
 
 double
 now()
@@ -25,14 +27,17 @@ now()
  return tv.tv_sec + tv.tv_usec / 1000000.0;
 }
 
+// get the first struct (n) and the address of this struct (p)
 static void 
-insert(int key, int value, struct entry **p, struct entry *n)
+insert(int key, int value, int i) 
 {
   struct entry *e = malloc(sizeof(struct entry));
   e->key = key;
   e->value = value;
-  e->next = n;
-  *p = e;
+	pthread_mutex_lock(&hashlock);
+  e->next = table[i];
+  table[i] = e;
+	pthread_mutex_unlock(&hashlock);
 }
 
 static 
@@ -42,7 +47,10 @@ void put(int key, int value)
 
   // is the key already present?
   struct entry *e = 0;
-  for (e = table[i]; e != 0; e = e->next) {
+	pthread_mutex_lock(&hashlock);
+	e = table[i];
+	pthread_mutex_unlock(&hashlock);
+  for (; e != 0; e = e->next) {
     if (e->key == key)
       break;
   }
@@ -51,7 +59,7 @@ void put(int key, int value)
     e->value = value;
   } else {
     // the new is new.
-    insert(key, value, &table[i], table[i]);
+    insert(key, value, i);
   }
 }
 
@@ -59,7 +67,6 @@ static struct entry*
 get(int key)
 {
   int i = key % NBUCKET;
-
 
   struct entry *e = 0;
   for (e = table[i]; e != 0; e = e->next) {
@@ -103,6 +110,7 @@ main(int argc, char *argv[])
   void *value;
   double t1, t0;
 
+	printf("changed :%lf\n",now());
   if (argc < 2) {
     fprintf(stderr, "Usage: %s nthreads\n", argv[0]);
     exit(-1);
@@ -123,7 +131,7 @@ main(int argc, char *argv[])
     assert(pthread_create(&tha[i], NULL, put_thread, (void *) (long) i) == 0);
   }
   for(int i = 0; i < nthread; i++) {
-    assert(pthread_join(tha[i], &value) == 0);
+    assert(pthread_join(tha[i], &value) == 0);//will be blocked util thread calling pthread_exit();
   }
   t1 = now();
 
@@ -133,6 +141,7 @@ main(int argc, char *argv[])
   //
   // now the gets
   //
+	// from now on , there is no possibility for writing table and list in table.
   t0 = now();
   for(int i = 0; i < nthread; i++) {
     assert(pthread_create(&tha[i], NULL, get_thread, (void *) (long) i) == 0);

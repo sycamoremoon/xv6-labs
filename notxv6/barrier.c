@@ -6,6 +6,7 @@
 
 static int nthread = 1;
 static int round = 1;
+static pthread_cond_t fast_cond = PTHREAD_COND_INITIALIZER;
 
 struct barrier {
   pthread_mutex_t barrier_mutex;
@@ -30,21 +31,30 @@ barrier()
   // Block until all threads have called barrier() and
   // then increment bstate.round.
   //
+	static int wakeup = 0;
 	pthread_mutex_lock(&bstate.barrier_mutex);
 	if(nthread == 1) bstate.round ++;
 	else {
-		//while(round == bstate.round)
-			//printf("round == bstate.round\n");
-		if(bstate.nthread+1 != nthread){
-			bstate.nthread ++;
-			while(bstate.nthread != nthread || round-1 == bstate.round){
+		if(bstate.nthread == nthread){
+			printf("fast thread");
+			printf(" threadid: %ld thread num: %d\n", pthread_self(), bstate.nthread);
+			pthread_cond_wait(&fast_cond,&bstate.barrier_mutex);
+		}
+
+		bstate.nthread ++;
+		if(bstate.nthread != nthread){
+			while(bstate.nthread != nthread){
+				printf("enter sleep,thread : %d\n", bstate.nthread);
 				pthread_cond_wait(&bstate.barrier_cond, &bstate.barrier_mutex);
+				printf("threadid: %ld confirm wake up. thread num: %d\n", pthread_self(), bstate.nthread);
 			}
-			bstate.nthread = (bstate.nthread==nthread) ? bstate.nthread-2: bstate.nthread-1;
-			if(bstate.nthread == 0) round = bstate.round + 1;
+			pthread_cond_broadcast(&fast_cond);
+			wakeup ++;
+			if(wakeup == nthread -1){ bstate.nthread = 0;
+			printf("after sub :thread num: %d wakeup : %d\n",bstate.nthread , wakeup);
+			wakeup = 0;}
 		}else{
 			bstate.round ++;//only if all thread called barrier()
-			bstate.nthread ++;
 			if(bstate.nthread == nthread){
 				pthread_cond_broadcast(&bstate.barrier_cond);
 			}else{

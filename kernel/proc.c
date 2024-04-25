@@ -353,10 +353,14 @@ exit(int status)
 
   // we might re-parent a child to init. we can't be precise about
   // waking up init, since we can't acquire its lock once we've
-  // acquired any other proc lock. so wake up init whether that's
-  // necessary or not. init may miss this wakeup, but that seems
-  // harmless.
+  // acquired any other proc lock."because init process always a parent"
+	// so wake up init whether that's necessary or not. 
+	// init may miss this wakeup, but that seems harmless.
+	
   acquire(&initproc->lock);
+	// make sure init process has been woken up ,
+	// so init process can free this process after exit finish
+	// even though init is already awake.
   wakeup1(initproc);
   release(&initproc->lock);
 
@@ -370,16 +374,38 @@ exit(int status)
   struct proc *original_parent = p->parent;
   release(&p->lock);
   
+  /* if the following code become:
+	 * {
+	 * 		acquire(&p->parent->lock);
+	 * 		acquire(&p->lock); 
+	 * }
+	 * That will cause a problem which current thread access p's 
+	 * member value without p->lock, so that other thread might
+	 * change p->parent at this window of time(eg: the parent exiting).
+	 *
+	 * On the onther hand, we can't acquire p->lock first, which violate
+	 * locking order might cause deadlock.
+	 */
+	
   // we need the parent's lock in order to wake it up from wait().
   // the parent-then-child rule says we have to lock it first.
   acquire(&original_parent->lock);
 
+	// child hold its own lock in case of parent found 
+	// a child is ZOMBIE and free it.
+	// while the child is still running
   acquire(&p->lock);
 
+	/* the order between p->lock held and release in scheduler
+	 * doesn't matter, because parent can't see stuff inside this,
+	 * it must acquire p->lock first to free this child
+	 */
+	
   // Give any children to init.
   reparent(p);
 
   // Parent might be sleeping in wait().
+	// must hold the original_parent->lock to avoid losting wakeup
   wakeup1(original_parent);
 
   p->xstate = status;

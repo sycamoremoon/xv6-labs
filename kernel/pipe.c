@@ -85,7 +85,8 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
 
   acquire(&pi->lock);
   for(i = 0; i < n; i++){
-    while(pi->nwrite == pi->nread + PIPESIZE){  //DOC: pipewrite-full
+    while(pi->nwrite == pi->nread + PIPESIZE){  
+			//DOC: pipewrite-full
       if(pi->readopen == 0 || pr->killed){
         release(&pi->lock);
         return -1;
